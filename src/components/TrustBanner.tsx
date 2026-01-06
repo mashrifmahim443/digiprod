@@ -1,4 +1,4 @@
-import { Shield, Zap, Mail, RefreshCcw } from "lucide-react";
+import { Shield, Zap, Mail } from "lucide-react";
 
 const trustItems = [
   {
@@ -15,11 +15,6 @@ const trustItems = [
     icon: Mail,
     title: "Email Support 24/7",
     description: "We're here when you need us",
-  },
-  {
-    icon: RefreshCcw,
-    title: "30-Day Refund Policy",
-    description: "Not satisfied? Get your money back",
   },
 ];
 

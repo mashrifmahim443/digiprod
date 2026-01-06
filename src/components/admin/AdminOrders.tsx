@@ -74,7 +74,7 @@ export default function AdminOrders() {
     }
   };
 
-  const updateOrderStatus = async (orderId: string, newStatus: "completed" | "pending" | "refunded" | "failed") => {
+  const updateOrderStatus = async (orderId: string, newStatus: "completed" | "pending" | "failed") => {
     try {
       const { error } = await supabase
         .from("orders")

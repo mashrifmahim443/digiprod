@@ -305,6 +305,12 @@ export default function Checkout() {
                 <Shield className="h-4 w-4" />
                 <span>Secure checkout. Instant delivery.</span>
               </div>
+
+              <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg">
+                <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+                  ⚠️ No Refund Policy: All sales are final. Please review your order carefully before completing the purchase.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
