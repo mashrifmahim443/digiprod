@@ -3,8 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Package, ShoppingCart, Key, DollarSign, Loader2, LogOut, ShieldAlert } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Package, ShoppingCart, Key, DollarSign, Loader2, LogOut, ShieldAlert, Settings, LayoutDashboard } from "lucide-react";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
+import AdminProducts from "@/components/admin/AdminProducts";
+import AdminKeys from "@/components/admin/AdminKeys";
+import AdminOrders from "@/components/admin/AdminOrders";
+import AdminSettings from "@/components/admin/AdminSettings";
 
 interface DashboardStats {
   total_products: number;
@@ -13,23 +18,96 @@ interface DashboardStats {
   available_keys: number;
 }
 
-interface RecentOrder {
-  id: string;
-  customer_email: string;
-  customer_name: string;
-  product_title: string;
-  amount_paid: number;
-  status: string;
-  created_at: string;
+function DashboardTab() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_dashboard_stats');
+      if (error) throw error;
+      setStats(data as unknown as DashboardStats);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Dashboard Overview</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Products
+            </CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.total_products || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Orders
+            </CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.total_orders || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Revenue
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${(stats?.total_revenue || 0).toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Available Keys
+            </CardTitle>
+            <Key className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.available_keys || 0}</div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }
 
 export default function Admin() {
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading, signOut } = useAdminAuth();
-  
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -37,44 +115,13 @@ export default function Admin() {
     }
   }, [authLoading, user, navigate]);
 
-  useEffect(() => {
-    if (user && isAdmin) {
-      fetchDashboardData();
-    } else if (!authLoading) {
-      setDataLoading(false);
-    }
-  }, [user, isAdmin, authLoading]);
-
-  const fetchDashboardData = async () => {
-    try {
-      // Fetch dashboard stats
-      const { data: statsData, error: statsError } = await supabase.rpc('get_dashboard_stats');
-      if (statsError) throw statsError;
-      setStats(statsData as unknown as DashboardStats);
-
-      // Fetch recent orders
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('v_recent_orders')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (ordersError) throw ordersError;
-      setRecentOrders(ordersData as RecentOrder[]);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setDataLoading(false);
-    }
-  };
-
   const handleSignOut = async () => {
     await signOut();
     navigate("/admin/auth");
   };
 
   // Loading state
-  if (authLoading || dataLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -82,7 +129,7 @@ export default function Admin() {
     );
   }
 
-  // Not authenticated - redirect handled by useEffect
+  // Not authenticated
   if (!user) {
     return null;
   }
@@ -125,8 +172,8 @@ export default function Admin() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage your products, orders, and keys</p>
+            <h1 className="text-3xl font-bold">Admin Panel</h1>
+            <p className="text-muted-foreground">Manage your store</p>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground hidden md:block">{user.email}</span>
@@ -137,112 +184,50 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Products
-              </CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_products || 0}</div>
-            </CardContent>
-          </Card>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="dashboard" className="gap-2">
+              <LayoutDashboard className="h-4 w-4 hidden sm:block" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="products" className="gap-2">
+              <Package className="h-4 w-4 hidden sm:block" />
+              Products
+            </TabsTrigger>
+            <TabsTrigger value="keys" className="gap-2">
+              <Key className="h-4 w-4 hidden sm:block" />
+              Keys
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="gap-2">
+              <ShoppingCart className="h-4 w-4 hidden sm:block" />
+              Orders
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="gap-2">
+              <Settings className="h-4 w-4 hidden sm:block" />
+              Settings
+            </TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Orders
-              </CardTitle>
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_orders || 0}</div>
-            </CardContent>
-          </Card>
+          <TabsContent value="dashboard">
+            <DashboardTab />
+          </TabsContent>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Revenue
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${(stats?.total_revenue || 0).toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
+          <TabsContent value="products">
+            <AdminProducts />
+          </TabsContent>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Available Keys
-              </CardTitle>
-              <Key className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.available_keys || 0}</div>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="keys">
+            <AdminKeys />
+          </TabsContent>
 
-        {/* Recent Orders */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentOrders.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No orders yet</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Customer</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Product</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Amount</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Status</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentOrders.map((order) => (
-                      <tr key={order.id} className="border-b last:border-0">
-                        <td className="py-3 px-2">
-                          <div>
-                            <div className="font-medium">{order.customer_name}</div>
-                            <div className="text-sm text-muted-foreground">{order.customer_email}</div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-2 text-sm">{order.product_title}</td>
-                        <td className="py-3 px-2 text-sm font-medium">${order.amount_paid?.toFixed(2)}</td>
-                        <td className="py-3 px-2">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            order.status === 'completed' 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                              : order.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                            {order.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-2 text-sm text-muted-foreground">
-                          {new Date(order.created_at).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          <TabsContent value="orders">
+            <AdminOrders />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <AdminSettings />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
