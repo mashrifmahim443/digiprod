@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Loader2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, X, Upload, Image as ImageIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -48,7 +48,7 @@ interface ProductFormData {
   original_price: string;
   description: string;
   short_description: string;
-  images: string;
+  images: string[];
   is_active: boolean;
   is_featured: boolean;
 }
@@ -60,7 +60,7 @@ const emptyForm: ProductFormData = {
   original_price: "",
   description: "",
   short_description: "",
-  images: "",
+  images: [],
   is_active: true,
   is_featured: false,
 };
@@ -74,6 +74,8 @@ export default function AdminProducts() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -125,7 +127,7 @@ export default function AdminProducts() {
       original_price: product.original_price?.toString() || "",
       description: product.description || "",
       short_description: product.short_description || "",
-      images: product.images.join("\n"),
+      images: product.images || [],
       is_active: product.is_active,
       is_featured: product.is_featured,
     });
@@ -136,6 +138,59 @@ export default function AdminProducts() {
     setSelectedProduct(null);
     setFormData(emptyForm);
     setDialogOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImage(true);
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `products/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("product-images")
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from("product-images")
+          .getPublicUrl(filePath);
+
+        uploadedUrls.push(urlData.publicUrl);
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...uploadedUrls]
+      }));
+
+      toast({ title: `${uploadedUrls.length} image(s) uploaded successfully` });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = "";
+      }
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSave = async () => {
@@ -150,7 +205,6 @@ export default function AdminProducts() {
 
     setSaving(true);
     try {
-      const images = formData.images.split("\n").filter(url => url.trim());
       const productData = {
         title: formData.title,
         slug: formData.slug,
@@ -158,7 +212,7 @@ export default function AdminProducts() {
         original_price: formData.original_price ? parseFloat(formData.original_price) : null,
         description: formData.description || null,
         short_description: formData.short_description || null,
-        images,
+        images: formData.images,
         is_active: formData.is_active,
         is_featured: formData.is_featured,
       };
@@ -390,13 +444,49 @@ export default function AdminProducts() {
             </div>
 
             <div className="space-y-2">
-              <Label>Image URLs (one per line)</Label>
-              <Textarea
-                value={formData.images}
-                onChange={(e) => setFormData(prev => ({ ...prev, images: e.target.value }))}
-                placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
-                rows={3}
+              <Label>Product Images</Label>
+              <input
+                type="file"
+                ref={imageInputRef}
+                onChange={handleImageUpload}
+                accept="image/*"
+                multiple
+                className="hidden"
               />
+              <div className="flex flex-wrap gap-3">
+                {formData.images.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={url}
+                      alt={`Product image ${index + 1}`}
+                      className="w-20 h-20 object-cover rounded-lg border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="w-20 h-20 border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
+                >
+                  {uploadingImage ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Upload</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">Click the upload button to add images. You can upload multiple images at once.</p>
             </div>
 
             <div className="flex gap-6">
