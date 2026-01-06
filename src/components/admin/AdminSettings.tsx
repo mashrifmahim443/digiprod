@@ -231,42 +231,43 @@ export default function AdminSettings() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Logo</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={siteInfo.siteLogo}
-                  onChange={(e) => setSiteInfo(prev => ({ ...prev, siteLogo: e.target.value }))}
-                  placeholder="https://example.com/logo.png"
-                  className="flex-1"
-                />
+              <Label>Site Logo</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Recommended size: 200x60px (PNG or SVG, max 2MB)
+              </p>
+              <div 
+                className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => logoInputRef.current?.click()}
+              >
                 <input
                   type="file"
                   ref={logoInputRef}
                   onChange={handleLogoUpload}
-                  accept="image/*"
+                  accept="image/png,image/svg+xml,image/jpeg,image/webp"
                   className="hidden"
                 />
-                <Button
-                  variant="outline"
-                  onClick={() => logoInputRef.current?.click()}
-                  disabled={uploadingLogo}
-                >
-                  {uploadingLogo ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                </Button>
+                {siteInfo.siteLogo ? (
+                  <div className="space-y-3">
+                    <img
+                      src={siteInfo.siteLogo}
+                      alt="Logo preview"
+                      className="max-h-16 mx-auto object-contain"
+                    />
+                    <p className="text-sm text-muted-foreground">Click to change logo</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {uploadingLogo ? (
+                      <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
+                    ) : (
+                      <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {uploadingLogo ? "Uploading..." : "Click to upload logo"}
+                    </p>
+                  </div>
+                )}
               </div>
-              {siteInfo.siteLogo && (
-                <div className="mt-2 p-4 bg-muted rounded-lg flex items-center justify-center">
-                  <img
-                    src={siteInfo.siteLogo}
-                    alt="Logo preview"
-                    className="max-h-16 object-contain"
-                  />
-                </div>
-              )}
             </div>
           </div>
           <Button onClick={saveSiteInfo} disabled={saving}>
