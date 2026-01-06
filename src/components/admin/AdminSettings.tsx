@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Image as ImageIcon, Upload, CreditCard, Wallet, Gift } from "lucide-react";
+import { Loader2, Save, Image as ImageIcon, Upload, CreditCard, Wallet, Gift, Mail } from "lucide-react";
 import { Json } from "@/integrations/supabase/types";
 
 interface HeroContent {
@@ -51,6 +51,11 @@ interface PopupSettings {
   discountText: string;
 }
 
+interface ContactSettings {
+  email: string;
+  whatsapp: string;
+}
+
 export default function AdminSettings() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -90,6 +95,11 @@ export default function AdminSettings() {
     image: "",
     backgroundColor: "#7c3aed",
     discountText: "",
+  });
+
+  const [contactSettings, setContactSettings] = useState<ContactSettings>({
+    email: "support@bundlebuy.com",
+    whatsapp: "+1234567890",
   });
 
   useEffect(() => {
@@ -151,6 +161,15 @@ export default function AdminSettings() {
           image: String(popup.image || ""),
           backgroundColor: String(popup.backgroundColor || "#7c3aed"),
           discountText: String(popup.discountText || ""),
+        });
+      }
+
+      // Load contact settings
+      if (settings.contact_info && typeof settings.contact_info === 'object' && !Array.isArray(settings.contact_info)) {
+        const contact = settings.contact_info as Record<string, Json>;
+        setContactSettings({
+          email: String(contact.email || "support@bundlebuy.com"),
+          whatsapp: String(contact.whatsapp || "+1234567890"),
         });
       }
     } catch (error) {
@@ -344,6 +363,45 @@ export default function AdminSettings() {
     }
   };
 
+  const saveContactSettings = async () => {
+    setSaving(true);
+    try {
+      const contactValue: Json = {
+        email: contactSettings.email,
+        whatsapp: contactSettings.whatsapp,
+      };
+
+      const { data: existing } = await supabase
+        .from("site_settings")
+        .select("key")
+        .eq("key", "contact_info")
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("site_settings")
+          .update({ value: contactValue })
+          .eq("key", "contact_info");
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("site_settings")
+          .insert({ key: "contact_info", value: contactValue });
+        if (error) throw error;
+      }
+
+      toast({ title: "Contact info saved successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -485,7 +543,43 @@ export default function AdminSettings() {
         </CardContent>
       </Card>
 
-      {/* Hero Section */}
+      {/* Contact Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Contact Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Support Email</Label>
+              <Input
+                value={contactSettings.email}
+                onChange={(e) => setContactSettings(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="support@example.com"
+                type="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>WhatsApp Number</Label>
+              <Input
+                value={contactSettings.whatsapp}
+                onChange={(e) => setContactSettings(prev => ({ ...prev, whatsapp: e.target.value }))}
+                placeholder="+1234567890"
+              />
+              <p className="text-xs text-muted-foreground">Include country code (e.g., +1 for US)</p>
+            </div>
+          </div>
+          <Button onClick={saveContactSettings} disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Save className="h-4 w-4 mr-2" />
+            Save Contact Info
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
