@@ -173,6 +173,33 @@ export type Database = {
           },
         ]
       }
+      moderator_requests: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          requested_role: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          requested_role?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          requested_role?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           amount_paid: number
