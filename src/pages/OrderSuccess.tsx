@@ -1,7 +1,7 @@
 import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Copy, Mail, Home, ShoppingBag } from "lucide-react";
+import { CheckCircle, Copy, Mail, Home, ShoppingBag, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function OrderSuccess() {
@@ -20,6 +20,32 @@ export default function OrderSuccess() {
         description: "Product key copied to clipboard",
       });
     }
+  };
+
+  const downloadKey = () => {
+    if (!key) return;
+    
+    const content = `Product: ${productTitle}
+Order ID: ${orderId}
+Product Key: ${key}
+
+Thank you for your purchase!
+Please keep this file safe for future reference.`;
+    
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `product-key-${orderId?.slice(0, 8) || "order"}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Downloaded!",
+      description: "Product key saved as text file",
+    });
   };
 
   if (!key) {
@@ -73,6 +99,17 @@ export default function OrderSuccess() {
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={downloadKey}
+                className="w-full"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Key as TXT
+              </Button>
             </div>
             <p className="text-xs text-muted-foreground">
               Save this key in a safe place. You can use it to activate your product.
