@@ -22,7 +22,7 @@ const TrustBanner = () => {
   return (
     <section className="py-16 glass-card border-y border-border/50">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-12 max-w-4xl mx-auto">
           {trustItems.map((item, index) => (
             <div
               key={index}
