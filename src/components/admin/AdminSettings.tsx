@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Image as ImageIcon, Upload, CreditCard, Wallet } from "lucide-react";
+import { Loader2, Save, Image as ImageIcon, Upload, CreditCard, Wallet, Gift } from "lucide-react";
 import { Json } from "@/integrations/supabase/types";
 
 interface HeroContent {
@@ -40,6 +40,17 @@ interface PaymentSettings {
   bkash: PaymentMethod;
 }
 
+interface PopupSettings {
+  enabled: boolean;
+  title: string;
+  description: string;
+  buttonText: string;
+  buttonLink: string;
+  image: string;
+  backgroundColor: string;
+  discountText: string;
+}
+
 export default function AdminSettings() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -66,6 +77,17 @@ export default function AdminSettings() {
     paypal: { id: "paypal", name: "PayPal", icon: "🅿️", enabled: false, apiKey: "", secretKey: "" },
     card: { id: "card", name: "Visa/Mastercard", icon: "💳", enabled: false },
     bkash: { id: "bkash", name: "bKash", icon: "📱", enabled: false, apiKey: "", secretKey: "" },
+  });
+
+  const [popupSettings, setPopupSettings] = useState<PopupSettings>({
+    enabled: false,
+    title: "",
+    description: "",
+    buttonText: "Shop Now",
+    buttonLink: "/products",
+    image: "",
+    backgroundColor: "#7c3aed",
+    discountText: "",
   });
 
   useEffect(() => {
@@ -113,6 +135,21 @@ export default function AdminSettings() {
           card: { ...prev.card, enabled: Boolean((pm.card as any)?.enabled) },
           bkash: { ...prev.bkash, enabled: Boolean((pm.bkash as any)?.enabled), apiKey: String((pm.bkash as any)?.apiKey || ""), secretKey: String((pm.bkash as any)?.secretKey || "") },
         }));
+      }
+
+      // Load popup settings
+      if (settings.offer_popup && typeof settings.offer_popup === 'object' && !Array.isArray(settings.offer_popup)) {
+        const popup = settings.offer_popup as Record<string, Json>;
+        setPopupSettings({
+          enabled: Boolean(popup.enabled),
+          title: String(popup.title || ""),
+          description: String(popup.description || ""),
+          buttonText: String(popup.buttonText || "Shop Now"),
+          buttonLink: String(popup.buttonLink || "/products"),
+          image: String(popup.image || ""),
+          backgroundColor: String(popup.backgroundColor || "#7c3aed"),
+          discountText: String(popup.discountText || ""),
+        });
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -249,6 +286,51 @@ export default function AdminSettings() {
       }
 
       toast({ title: "Payment settings saved successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const savePopupSettings = async () => {
+    setSaving(true);
+    try {
+      const popupValue: Json = {
+        enabled: popupSettings.enabled,
+        title: popupSettings.title,
+        description: popupSettings.description,
+        buttonText: popupSettings.buttonText,
+        buttonLink: popupSettings.buttonLink,
+        image: popupSettings.image,
+        backgroundColor: popupSettings.backgroundColor,
+        discountText: popupSettings.discountText,
+      };
+
+      const { data: existing } = await supabase
+        .from("site_settings")
+        .select("key")
+        .eq("key", "offer_popup")
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("site_settings")
+          .update({ value: popupValue })
+          .eq("key", "offer_popup");
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("site_settings")
+          .insert({ key: "offer_popup", value: popupValue });
+        if (error) throw error;
+      }
+
+      toast({ title: "Popup settings saved successfully" });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -630,6 +712,135 @@ export default function AdminSettings() {
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             <Save className="h-4 w-4 mr-2" />
             Save Payment Settings
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Offer Popup */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Gift className="h-5 w-5" />
+            Offer Popup
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <h4 className="font-medium">Enable Popup</h4>
+              <p className="text-sm text-muted-foreground">Show offer popup to visitors</p>
+            </div>
+            <Switch
+              checked={popupSettings.enabled}
+              onCheckedChange={(checked) => setPopupSettings(prev => ({ ...prev, enabled: checked }))}
+            />
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Discount Badge Text</Label>
+              <Input
+                value={popupSettings.discountText}
+                onChange={(e) => setPopupSettings(prev => ({ ...prev, discountText: e.target.value }))}
+                placeholder="50% OFF"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Background Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={popupSettings.backgroundColor}
+                  onChange={(e) => setPopupSettings(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                  className="w-16 h-10 p-1 cursor-pointer"
+                />
+                <Input
+                  value={popupSettings.backgroundColor}
+                  onChange={(e) => setPopupSettings(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                  placeholder="#7c3aed"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Title</Label>
+            <Input
+              value={popupSettings.title}
+              onChange={(e) => setPopupSettings(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Special Offer!"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea
+              value={popupSettings.description}
+              onChange={(e) => setPopupSettings(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Get amazing discounts on all products..."
+              rows={2}
+            />
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Button Text</Label>
+              <Input
+                value={popupSettings.buttonText}
+                onChange={(e) => setPopupSettings(prev => ({ ...prev, buttonText: e.target.value }))}
+                placeholder="Shop Now"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Button Link</Label>
+              <Input
+                value={popupSettings.buttonLink}
+                onChange={(e) => setPopupSettings(prev => ({ ...prev, buttonLink: e.target.value }))}
+                placeholder="/products"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Image URL (Optional)</Label>
+            <Input
+              value={popupSettings.image}
+              onChange={(e) => setPopupSettings(prev => ({ ...prev, image: e.target.value }))}
+              placeholder="https://example.com/offer-image.jpg"
+            />
+            {popupSettings.image && (
+              <div className="mt-2 rounded-lg overflow-hidden border h-32">
+                <img
+                  src={popupSettings.image}
+                  alt="Popup preview"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Preview */}
+          {popupSettings.title && (
+            <div 
+              className="rounded-lg p-4 text-white"
+              style={{ backgroundColor: popupSettings.backgroundColor }}
+            >
+              <p className="text-xs font-medium opacity-80 mb-1">Preview</p>
+              {popupSettings.discountText && (
+                <span className="inline-block bg-white/20 rounded-full px-2 py-0.5 text-xs mb-2">
+                  {popupSettings.discountText}
+                </span>
+              )}
+              <h4 className="font-bold">{popupSettings.title}</h4>
+              <p className="text-sm opacity-90">{popupSettings.description}</p>
+            </div>
+          )}
+
+          <Button onClick={savePopupSettings} disabled={saving} className="w-full">
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Save className="h-4 w-4 mr-2" />
+            Save Popup Settings
           </Button>
         </CardContent>
       </Card>

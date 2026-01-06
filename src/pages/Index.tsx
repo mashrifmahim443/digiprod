@@ -3,6 +3,7 @@ import HeroSection from "@/components/HeroSection";
 import FeaturedProducts from "@/components/FeaturedProducts";
 import TrustBanner from "@/components/TrustBanner";
 import Footer from "@/components/Footer";
+import OfferPopup from "@/components/OfferPopup";
 
 const Index = () => {
   return (
@@ -14,6 +15,7 @@ const Index = () => {
         <TrustBanner />
       </main>
       <Footer />
+      <OfferPopup />
     </div>
   );
 };
