@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Mail, CreditCard, Shield, Loader2, Phone, MapPin, Ticket, Check, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { trackBeginCheckout, trackPurchase } from "@/components/GTMProvider";
 
 interface Product {
   id: string;
@@ -53,6 +54,18 @@ export default function Checkout() {
       fetchProduct();
     }
   }, [slug]);
+
+  // Track begin_checkout when product is loaded
+  useEffect(() => {
+    if (product) {
+      trackBeginCheckout({
+        id: product.id,
+        name: product.title,
+        price: product.price,
+        coupon: appliedCoupon?.code,
+      });
+    }
+  }, [product]);
 
   const fetchProduct = async () => {
     try {
@@ -168,6 +181,18 @@ export default function Checkout() {
       const result = data as { success: boolean; order_id?: string; key?: string; error?: string };
       
       if (result.success) {
+        // Track purchase event in GTM
+        trackPurchase({
+          orderId: result.order_id || "",
+          value: getFinalPrice(),
+          product: {
+            id: product.id,
+            name: product.title,
+            price: product.price,
+          },
+          coupon: appliedCoupon?.code,
+        });
+
         navigate(`/order-success/${result.order_id}`, {
           state: { key: result.key, email, productTitle: product.title }
         });
