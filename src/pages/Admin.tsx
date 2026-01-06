@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Package, ShoppingCart, Key, DollarSign, Loader2 } from "lucide-react";
+import { Package, ShoppingCart, Key, DollarSign, Loader2, LogOut, ShieldAlert } from "lucide-react";
+import { useAdminAuth } from "@/hooks/use-admin-auth";
 
 interface DashboardStats {
   total_products: number;
@@ -22,13 +24,26 @@ interface RecentOrder {
 }
 
 export default function Admin() {
+  const navigate = useNavigate();
+  const { user, isAdmin, loading: authLoading, signOut } = useAdminAuth();
+  
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (!authLoading && !user) {
+      navigate("/admin/auth");
+    }
+  }, [authLoading, user, navigate]);
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      fetchDashboardData();
+    } else if (!authLoading) {
+      setDataLoading(false);
+    }
+  }, [user, isAdmin, authLoading]);
 
   const fetchDashboardData = async () => {
     try {
@@ -49,11 +64,17 @@ export default function Admin() {
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
-  if (loading) {
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/admin/auth");
+  };
+
+  // Loading state
+  if (authLoading || dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -61,12 +82,59 @@ export default function Admin() {
     );
   }
 
+  // Not authenticated - redirect handled by useEffect
+  if (!user) {
+    return null;
+  }
+
+  // Authenticated but not admin
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+              <ShieldAlert className="w-6 h-6 text-destructive" />
+            </div>
+            <CardTitle>Access Denied</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              You don't have admin privileges. Please contact an administrator to request access.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Logged in as: {user.email}
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" onClick={() => navigate("/")}>
+                Go Home
+              </Button>
+              <Button variant="destructive" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage your products, orders, and keys</p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <p className="text-muted-foreground">Manage your products, orders, and keys</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground hidden md:block">{user.email}</span>
+            <Button variant="outline" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
