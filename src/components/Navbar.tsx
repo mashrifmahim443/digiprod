@@ -62,12 +62,6 @@ const Navbar = () => {
               )}
             </Button>
 
-            {/* Admin Link (hidden on mobile) */}
-            <Link to="/admin" className="hidden md:block">
-              <Button variant="outline" size="sm">
-                Admin
-              </Button>
-            </Link>
 
             {/* Mobile Menu Toggle */}
             <Button
@@ -108,15 +102,8 @@ const Navbar = () => {
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Contact
-              </Link>
-              <Link
-                to="/admin"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Admin
-              </Link>
+              Contact
+            </Link>
             </div>
           </div>
         )}
