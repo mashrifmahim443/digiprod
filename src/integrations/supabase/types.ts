@@ -357,6 +357,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       v_product_stock_status: {
@@ -409,6 +430,13 @@ export type Database = {
     }
     Functions: {
       get_dashboard_stats: { Args: never; Returns: Json }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       process_order: {
         Args: {
           p_customer_email: string
@@ -424,6 +452,7 @@ export type Database = {
     }
     Enums: {
       admin_role: "super_admin" | "admin" | "moderator"
+      app_role: "admin" | "moderator" | "user"
       order_status: "pending" | "completed" | "refunded" | "failed"
     }
     CompositeTypes: {
@@ -553,6 +582,7 @@ export const Constants = {
   public: {
     Enums: {
       admin_role: ["super_admin", "admin", "moderator"],
+      app_role: ["admin", "moderator", "user"],
       order_status: ["pending", "completed", "refunded", "failed"],
     },
   },
