@@ -176,9 +176,12 @@ export type Database = {
       orders: {
         Row: {
           amount_paid: number
+          coupon_code: string | null
+          coupon_id: string | null
           created_at: string | null
           customer_email: string
           customer_name: string | null
+          discount_amount: number | null
           id: string
           ip_address: string | null
           key_delivered: string | null
@@ -192,9 +195,12 @@ export type Database = {
         }
         Insert: {
           amount_paid: number
+          coupon_code?: string | null
+          coupon_id?: string | null
           created_at?: string | null
           customer_email: string
           customer_name?: string | null
+          discount_amount?: number | null
           id?: string
           ip_address?: string | null
           key_delivered?: string | null
@@ -208,9 +214,12 @@ export type Database = {
         }
         Update: {
           amount_paid?: number
+          coupon_code?: string | null
+          coupon_id?: string | null
           created_at?: string | null
           customer_email?: string
           customer_name?: string | null
+          discount_amount?: number | null
           id?: string
           ip_address?: string | null
           key_delivered?: string | null
@@ -223,6 +232,13 @@ export type Database = {
           user_agent?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_key_delivered_fkey"
             columns: ["key_delivered"]
