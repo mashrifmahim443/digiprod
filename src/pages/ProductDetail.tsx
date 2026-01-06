@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +7,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { trackProductView } from "@/components/GTMProvider";
 import { 
   ArrowLeft, 
   ShoppingCart, 
@@ -57,6 +59,18 @@ const ProductDetail = () => {
   const discount = product?.original_price
     ? Math.round(((Number(product.original_price) - Number(product.price)) / Number(product.original_price)) * 100)
     : 0;
+
+  // Track product view in GTM
+  useEffect(() => {
+    if (product) {
+      trackProductView({
+        id: product.id,
+        name: product.title,
+        price: Number(product.price),
+        category: product.categories?.name || "",
+      });
+    }
+  }, [product]);
 
   if (isLoading) {
     return (
