@@ -1,67 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { Mail, MessageSquare, Clock, Send } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { Mail, MessageCircle, Clock, Loader2 } from "lucide-react";
+import { Json } from "@/integrations/supabase/types";
+
+interface ContactInfo {
+  email: string;
+  whatsapp: string;
+}
 
 const Contact = () => {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    subject: "",
-    message: "",
+  const [loading, setLoading] = useState(true);
+  const [contactInfo, setContactInfo] = useState<ContactInfo>({
+    email: "support@bundlebuy.com",
+    whatsapp: "+1234567890",
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  useEffect(() => {
+    const fetchContactInfo = async () => {
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("value")
+          .eq("key", "contact_info")
+          .maybeSingle();
 
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (data?.value && typeof data.value === 'object' && !Array.isArray(data.value)) {
+          const info = data.value as Record<string, Json>;
+          setContactInfo({
+            email: String(info.email || "support@bundlebuy.com"),
+            whatsapp: String(info.whatsapp || "+1234567890"),
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching contact info:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    toast({
-      title: "Message Sent!",
-      description: "We will get back to you within 24 hours.",
-    });
+    fetchContactInfo();
+  }, []);
 
-    setFormData({ name: "", email: "", subject: "", message: "" });
-    setLoading(false);
+  const handleWhatsAppClick = () => {
+    const cleanNumber = contactInfo.whatsapp.replace(/[^0-9]/g, '');
+    window.open(`https://wa.me/${cleanNumber}`, '_blank');
   };
-
-  const contactInfo = [
-    {
-      icon: Mail,
-      title: "Email Us",
-      description: "support@bundlebuy.com",
-      subtitle: "We reply within 24 hours",
-    },
-    {
-      icon: MessageSquare,
-      title: "Live Chat",
-      description: "Available on website",
-      subtitle: "Mon-Fri, 9am-6pm",
-    },
-    {
-      icon: Clock,
-      title: "Response Time",
-      description: "Under 24 hours",
-      subtitle: "For all inquiries",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
       <section className="pt-32 pb-16 px-4">
-        <div className="container mx-auto max-w-6xl">
+        <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               Contact <span className="text-primary">Support</span>
@@ -71,86 +64,51 @@ const Contact = () => {
             </p>
           </div>
 
-          {/* Contact Info Cards */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
-            {contactInfo.map((info, index) => (
-              <Card key={index} className="text-center">
-                <CardContent className="pt-6">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <info.icon className="w-6 h-6 text-primary" />
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+              {/* Email Card */}
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => window.location.href = `mailto:${contactInfo.email}`}>
+                <CardContent className="pt-8 pb-8 text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Mail className="w-8 h-8 text-primary" />
                   </div>
-                  <h3 className="font-semibold mb-1">{info.title}</h3>
-                  <p className="text-primary font-medium">{info.description}</p>
-                  <p className="text-sm text-muted-foreground">{info.subtitle}</p>
+                  <h3 className="text-xl font-semibold mb-2">Email Us</h3>
+                  <p className="text-primary font-medium text-lg mb-1">{contactInfo.email}</p>
+                  <p className="text-sm text-muted-foreground">We reply within 24 hours</p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
 
-          {/* Contact Form */}
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>Send us a Message</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Your Name</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="John Doe"
-                      required
-                    />
+              {/* WhatsApp Card */}
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={handleWhatsAppClick}>
+                <CardContent className="pt-8 pb-8 text-center">
+                  <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                    <MessageCircle className="w-8 h-8 text-green-500" />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="john@example.com"
-                      required
-                    />
-                  </div>
+                  <h3 className="text-xl font-semibold mb-2">WhatsApp</h3>
+                  <p className="text-green-500 font-medium text-lg mb-1">{contactInfo.whatsapp}</p>
+                  <p className="text-sm text-muted-foreground">Chat with us instantly</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Response Time Info */}
+          <div className="mt-12 text-center">
+            <Card className="max-w-md mx-auto">
+              <CardContent className="pt-6 pb-6">
+                <div className="flex items-center justify-center gap-3">
+                  <Clock className="w-5 h-5 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    Average response time: <span className="font-semibold text-foreground">Under 24 hours</span>
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Input
-                    id="subject"
-                    value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    placeholder="How can we help?"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="message">Message</Label>
-                  <Textarea
-                    id="message"
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    placeholder="Tell us more about your inquiry..."
-                    rows={5}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    "Sending..."
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-2" />
-                      Send Message
-                    </>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </section>
 
