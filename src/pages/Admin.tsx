@@ -4,12 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, ShoppingCart, Key, DollarSign, Loader2, LogOut, ShieldAlert, Settings, LayoutDashboard } from "lucide-react";
+import { Package, ShoppingCart, Key, DollarSign, Loader2, LogOut, ShieldAlert, Settings, LayoutDashboard, FolderOpen } from "lucide-react";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import AdminProducts from "@/components/admin/AdminProducts";
 import AdminKeys from "@/components/admin/AdminKeys";
 import AdminOrders from "@/components/admin/AdminOrders";
 import AdminSettings from "@/components/admin/AdminSettings";
+import AdminCategories from "@/components/admin/AdminCategories";
 
 interface DashboardStats {
   total_products: number;
@@ -185,7 +186,7 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4 hidden sm:block" />
               Dashboard
@@ -193,6 +194,10 @@ export default function Admin() {
             <TabsTrigger value="products" className="gap-2">
               <Package className="h-4 w-4 hidden sm:block" />
               Products
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="gap-2">
+              <FolderOpen className="h-4 w-4 hidden sm:block" />
+              Categories
             </TabsTrigger>
             <TabsTrigger value="keys" className="gap-2">
               <Key className="h-4 w-4 hidden sm:block" />
@@ -214,6 +219,10 @@ export default function Admin() {
 
           <TabsContent value="products">
             <AdminProducts />
+          </TabsContent>
+
+          <TabsContent value="categories">
+            <AdminCategories />
           </TabsContent>
 
           <TabsContent value="keys">

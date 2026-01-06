@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, Image as ImageIcon, Upload } from "lucide-react";
 import { Json } from "@/integrations/supabase/types";
 
 interface HeroContent {
@@ -27,6 +27,8 @@ export default function AdminSettings() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   
   const [heroContent, setHeroContent] = useState<HeroContent>({
     title: "",
@@ -168,6 +170,39 @@ export default function AdminSettings() {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("site-assets")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("site-assets")
+        .getPublicUrl(filePath);
+
+      setSiteInfo((prev) => ({ ...prev, siteLogo: urlData.publicUrl }));
+      toast({ title: "Logo uploaded successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -196,12 +231,42 @@ export default function AdminSettings() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Logo URL</Label>
-              <Input
-                value={siteInfo.siteLogo}
-                onChange={(e) => setSiteInfo(prev => ({ ...prev, siteLogo: e.target.value }))}
-                placeholder="https://example.com/logo.png"
-              />
+              <Label>Logo</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={siteInfo.siteLogo}
+                  onChange={(e) => setSiteInfo(prev => ({ ...prev, siteLogo: e.target.value }))}
+                  placeholder="https://example.com/logo.png"
+                  className="flex-1"
+                />
+                <input
+                  type="file"
+                  ref={logoInputRef}
+                  onChange={handleLogoUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={uploadingLogo}
+                >
+                  {uploadingLogo ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              {siteInfo.siteLogo && (
+                <div className="mt-2 p-4 bg-muted rounded-lg flex items-center justify-center">
+                  <img
+                    src={siteInfo.siteLogo}
+                    alt="Logo preview"
+                    className="max-h-16 object-contain"
+                  />
+                </div>
+              )}
             </div>
           </div>
           <Button onClick={saveSiteInfo} disabled={saving}>
