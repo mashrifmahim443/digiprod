@@ -173,11 +173,6 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/affiliate" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Affiliate Program
-                </Link>
-              </li>
-              <li>
                 <Link to="/blog" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Blog
                 </Link>
@@ -197,11 +192,6 @@ const Footer = () => {
               <li>
                 <Link to="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link to="/cookies" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Cookie Policy
                 </Link>
               </li>
             </ul>
