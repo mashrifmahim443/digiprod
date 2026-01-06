@@ -16,8 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Filter, X } from "lucide-react";
+import { Filter, X, Sun, Moon, Monitor } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useTheme } from "@/hooks/use-theme";
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,6 +27,7 @@ const Products = () => {
     searchParams.get("category")?.split(",").filter(Boolean) || []
   );
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "popular");
+  const { theme, setTheme } = useTheme();
 
   // Fetch categories
   const { data: categories } = useQuery({
@@ -136,6 +138,34 @@ const Products = () => {
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>${priceRange[0]}</span>
           <span>${priceRange[1]}+</span>
+        </div>
+      </div>
+
+      {/* Theme Selection */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-foreground">Theme</h3>
+        <div className="space-y-3">
+          <label
+            className={`flex items-center gap-3 cursor-pointer p-2 rounded-lg transition-colors ${theme === 'light' ? 'bg-primary/10 border border-primary' : 'hover:bg-muted/50'}`}
+            onClick={() => setTheme('light')}
+          >
+            <Sun className="w-4 h-4" />
+            <span className="text-sm text-foreground">Light</span>
+          </label>
+          <label
+            className={`flex items-center gap-3 cursor-pointer p-2 rounded-lg transition-colors ${theme === 'dark' ? 'bg-primary/10 border border-primary' : 'hover:bg-muted/50'}`}
+            onClick={() => setTheme('dark')}
+          >
+            <Moon className="w-4 h-4" />
+            <span className="text-sm text-foreground">Dark</span>
+          </label>
+          <label
+            className={`flex items-center gap-3 cursor-pointer p-2 rounded-lg transition-colors ${theme === 'system' ? 'bg-primary/10 border border-primary' : 'hover:bg-muted/50'}`}
+            onClick={() => setTheme('system')}
+          >
+            <Monitor className="w-4 h-4" />
+            <span className="text-sm text-foreground">System</span>
+          </label>
         </div>
       </div>
 
