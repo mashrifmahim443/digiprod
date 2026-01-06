@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail, CreditCard, Shield, Loader2, Phone, MapPin } from "lucide-react";
+import { ArrowLeft, Mail, CreditCard, Shield, Loader2, Phone, MapPin, Ticket, Check, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,6 +16,17 @@ interface Product {
   original_price: number | null;
   images: string[];
   short_description: string | null;
+}
+
+interface CouponData {
+  valid: boolean;
+  coupon_id?: string;
+  code?: string;
+  discount_type?: string;
+  discount_value?: number;
+  discount_amount?: number;
+  final_amount?: number;
+  error?: string;
 }
 
 export default function Checkout() {
@@ -31,6 +42,11 @@ export default function Checkout() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [processing, setProcessing] = useState(false);
+  
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponData | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
 
   useEffect(() => {
     if (slug) {
@@ -62,6 +78,49 @@ export default function Checkout() {
     }
   };
 
+  const applyCoupon = async () => {
+    if (!couponCode.trim() || !product) return;
+    
+    setValidatingCoupon(true);
+    try {
+      const { data, error } = await supabase.rpc('validate_coupon', {
+        p_code: couponCode.trim(),
+        p_order_amount: product.price
+      });
+      
+      if (error) throw error;
+      
+      const result = data as unknown as CouponData;
+      
+      if (result.valid) {
+        setAppliedCoupon(result);
+        toast({
+          title: "Coupon applied!",
+          description: `You saved $${result.discount_amount?.toFixed(2)}`,
+        });
+      } else {
+        toast({
+          title: "Invalid coupon",
+          description: result.error || "This coupon cannot be applied",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+  };
+
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !name || !phone || !address) {
@@ -75,12 +134,22 @@ export default function Checkout() {
     setStep('payment');
   };
 
+  const getFinalPrice = () => {
+    if (!product) return 0;
+    return appliedCoupon?.final_amount ?? product.price;
+  };
+
   const handlePayment = async () => {
     if (!product) return;
 
     setProcessing(true);
     
     try {
+      // If coupon applied, increment usage
+      if (appliedCoupon?.coupon_id) {
+        await supabase.rpc('use_coupon', { p_coupon_id: appliedCoupon.coupon_id });
+      }
+      
       // Call edge function for payment processing
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
@@ -89,6 +158,8 @@ export default function Checkout() {
           customerName: name,
           customerPhone: phone,
           customerAddress: address,
+          couponCode: appliedCoupon?.code || null,
+          discountAmount: appliedCoupon?.discount_amount || 0,
         }
       });
 
@@ -162,6 +233,47 @@ export default function Checkout() {
                 </div>
               </div>
               
+              {/* Coupon Code Input */}
+              <div className="border-t pt-4">
+                <Label className="text-sm font-medium mb-2 block">Have a coupon?</Label>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span className="text-sm font-medium">{appliedCoupon.code}</span>
+                      <span className="text-xs text-green-600">
+                        ({appliedCoupon.discount_type === 'percentage' 
+                          ? `${appliedCoupon.discount_value}% off` 
+                          : `$${appliedCoupon.discount_value} off`})
+                      </span>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={removeCoupon}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter coupon code"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      className="uppercase"
+                    />
+                    <Button 
+                      variant="outline" 
+                      onClick={applyCoupon}
+                      disabled={validatingCoupon || !couponCode.trim()}
+                    >
+                      {validatingCoupon ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Apply"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
@@ -169,15 +281,23 @@ export default function Checkout() {
                 </div>
                 {product.original_price && product.original_price > product.price && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Discount</span>
+                    <span className="text-muted-foreground">Product Discount</span>
                     <span className="text-green-500">
                       -${(product.original_price - product.price).toFixed(2)}
                     </span>
                   </div>
                 )}
+                {appliedCoupon && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Coupon ({appliedCoupon.code})</span>
+                    <span className="text-green-500">
+                      -${appliedCoupon.discount_amount?.toFixed(2)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between font-semibold text-lg border-t pt-2">
                   <span>Total</span>
-                  <span className="text-primary">${product.price.toFixed(2)}</span>
+                  <span className="text-primary">${getFinalPrice().toFixed(2)}</span>
                 </div>
               </div>
 
@@ -311,7 +431,7 @@ export default function Checkout() {
                           Processing...
                         </>
                       ) : (
-                        <>Pay ${product.price.toFixed(2)}</>
+                        <>Pay ${getFinalPrice().toFixed(2)}</>
                       )}
                     </Button>
                   </div>

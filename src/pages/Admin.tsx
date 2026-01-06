@@ -4,13 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, ShoppingCart, Key, DollarSign, Loader2, LogOut, ShieldAlert, Settings, LayoutDashboard, FolderOpen } from "lucide-react";
+import { Package, ShoppingCart, Key, DollarSign, Loader2, LogOut, ShieldAlert, Settings, LayoutDashboard, FolderOpen, Ticket } from "lucide-react";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import AdminProducts from "@/components/admin/AdminProducts";
 import AdminKeys from "@/components/admin/AdminKeys";
 import AdminOrders from "@/components/admin/AdminOrders";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminCategories from "@/components/admin/AdminCategories";
+import AdminCoupons from "@/components/admin/AdminCoupons";
 
 interface DashboardStats {
   total_products: number;
@@ -186,7 +187,7 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4 hidden sm:block" />
               Dashboard
@@ -202,6 +203,10 @@ export default function Admin() {
             <TabsTrigger value="keys" className="gap-2">
               <Key className="h-4 w-4 hidden sm:block" />
               Keys
+            </TabsTrigger>
+            <TabsTrigger value="coupons" className="gap-2">
+              <Ticket className="h-4 w-4 hidden sm:block" />
+              Coupons
             </TabsTrigger>
             <TabsTrigger value="orders" className="gap-2">
               <ShoppingCart className="h-4 w-4 hidden sm:block" />
@@ -227,6 +232,10 @@ export default function Admin() {
 
           <TabsContent value="keys">
             <AdminKeys />
+          </TabsContent>
+
+          <TabsContent value="coupons">
+            <AdminCoupons />
           </TabsContent>
 
           <TabsContent value="orders">

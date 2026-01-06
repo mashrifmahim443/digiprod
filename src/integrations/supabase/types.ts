@@ -83,6 +83,48 @@ export type Database = {
         }
         Relationships: []
       }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string | null
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+          min_order_amount: number | null
+          updated_at: string | null
+          used_count: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          discount_type?: string
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_order_amount?: number | null
+          updated_at?: string | null
+          used_count?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_order_amount?: number | null
+          updated_at?: string | null
+          used_count?: number | null
+        }
+        Relationships: []
+      }
       email_logs: {
         Row: {
           created_at: string | null
@@ -447,6 +489,11 @@ export type Database = {
           p_product_id: string
           p_user_agent?: string
         }
+        Returns: Json
+      }
+      use_coupon: { Args: { p_coupon_id: string }; Returns: undefined }
+      validate_coupon: {
+        Args: { p_code: string; p_order_amount: number }
         Returns: Json
       }
     }
