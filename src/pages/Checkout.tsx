@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail, CreditCard, Shield, Loader2 } from "lucide-react";
+import { ArrowLeft, Mail, CreditCard, Shield, Loader2, Phone, MapPin } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 interface Product {
@@ -27,6 +28,8 @@ export default function Checkout() {
   const [step, setStep] = useState<'email' | 'payment'>('email');
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
@@ -61,10 +64,10 @@ export default function Checkout() {
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !name) {
+    if (!email || !name || !phone || !address) {
       toast({
         title: "Required fields",
-        description: "Please enter your name and email",
+        description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
@@ -84,6 +87,8 @@ export default function Checkout() {
           productId: product.id,
           customerEmail: email,
           customerName: name,
+          customerPhone: phone,
+          customerAddress: address,
         }
       });
 
@@ -210,7 +215,7 @@ export default function Checkout() {
                 <CardContent>
                   <form onSubmit={handleEmailSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
+                      <Label htmlFor="name">Full Name *</Label>
                       <Input
                         id="name"
                         type="text"
@@ -221,7 +226,7 @@ export default function Checkout() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
+                      <Label htmlFor="email">Email Address *</Label>
                       <Input
                         id="email"
                         type="email"
@@ -233,6 +238,28 @@ export default function Checkout() {
                       <p className="text-xs text-muted-foreground">
                         Your product key will be sent to this email
                       </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number *</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+880 1XXX-XXXXXX"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Delivery Address *</Label>
+                      <Textarea
+                        id="address"
+                        placeholder="Enter your full address..."
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        rows={3}
+                        required
+                      />
                     </div>
                     <Button type="submit" className="w-full">
                       Continue to Payment
@@ -254,6 +281,14 @@ export default function Checkout() {
                     <div className="flex justify-between text-sm">
                       <span>Email</span>
                       <span className="font-medium">{email}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Phone</span>
+                      <span className="font-medium">{phone}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="block mb-1">Address</span>
+                      <span className="font-medium text-xs">{address}</span>
                     </div>
                   </div>
 
