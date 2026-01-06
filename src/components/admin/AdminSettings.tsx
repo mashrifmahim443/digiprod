@@ -7,8 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Image as ImageIcon, Upload, CreditCard, Wallet, Gift, Mail } from "lucide-react";
+import { Loader2, Save, Image as ImageIcon, Upload, CreditCard, Wallet, Gift, Mail, BarChart3 } from "lucide-react";
 import { Json } from "@/integrations/supabase/types";
+
+interface GTMSettings {
+  gtmId: string;
+  enabled: boolean;
+}
 
 interface HeroContent {
   title: string;
@@ -102,6 +107,11 @@ export default function AdminSettings() {
     whatsapp: "+1234567890",
   });
 
+  const [gtmSettings, setGtmSettings] = useState<GTMSettings>({
+    gtmId: "",
+    enabled: false,
+  });
+
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -170,6 +180,15 @@ export default function AdminSettings() {
         setContactSettings({
           email: String(contact.email || "support@bundlebuy.com"),
           whatsapp: String(contact.whatsapp || "+1234567890"),
+        });
+      }
+
+      // Load GTM settings
+      if (settings.gtm_settings && typeof settings.gtm_settings === 'object' && !Array.isArray(settings.gtm_settings)) {
+        const gtm = settings.gtm_settings as Record<string, Json>;
+        setGtmSettings({
+          gtmId: String(gtm.gtmId || ""),
+          enabled: Boolean(gtm.enabled),
         });
       }
     } catch (error) {
@@ -391,6 +410,45 @@ export default function AdminSettings() {
       }
 
       toast({ title: "Contact info saved successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveGTMSettings = async () => {
+    setSaving(true);
+    try {
+      const gtmValue: Json = {
+        gtmId: gtmSettings.gtmId,
+        enabled: gtmSettings.enabled,
+      };
+
+      const { data: existing } = await supabase
+        .from("site_settings")
+        .select("key")
+        .eq("key", "gtm_settings")
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("site_settings")
+          .update({ value: gtmValue })
+          .eq("key", "gtm_settings");
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("site_settings")
+          .insert({ key: "gtm_settings", value: gtmValue });
+        if (error) throw error;
+      }
+
+      toast({ title: "GTM settings saved! Refresh the page to apply changes." });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -1040,6 +1098,57 @@ export default function AdminSettings() {
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             <Save className="h-4 w-4 mr-2" />
             Save Contact Settings
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Google Tag Manager Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Google Tag Manager
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+            <div>
+              <p className="font-medium">Enable GTM</p>
+              <p className="text-sm text-muted-foreground">Enable Google Tag Manager tracking</p>
+            </div>
+            <Switch
+              checked={gtmSettings.enabled}
+              onCheckedChange={(checked) => setGtmSettings(prev => ({ ...prev, enabled: checked }))}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>GTM Container ID</Label>
+            <Input
+              value={gtmSettings.gtmId}
+              onChange={(e) => setGtmSettings(prev => ({ ...prev, gtmId: e.target.value }))}
+              placeholder="GTM-XXXXXXX"
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter your Google Tag Manager container ID (e.g., GTM-ABC123)
+            </p>
+          </div>
+
+          <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
+            <p className="font-medium">Data Layer Events Available:</p>
+            <ul className="list-disc list-inside text-muted-foreground space-y-1">
+              <li><code className="text-xs bg-background px-1 rounded">page_view</code> - Automatic page view tracking</li>
+              <li><code className="text-xs bg-background px-1 rounded">view_item</code> - Product page views</li>
+              <li><code className="text-xs bg-background px-1 rounded">add_to_cart</code> - Add to cart events</li>
+              <li><code className="text-xs bg-background px-1 rounded">begin_checkout</code> - Checkout initiated</li>
+              <li><code className="text-xs bg-background px-1 rounded">purchase</code> - Successful purchases</li>
+            </ul>
+          </div>
+
+          <Button onClick={saveGTMSettings} disabled={saving} className="w-full">
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Save className="h-4 w-4 mr-2" />
+            Save GTM Settings
           </Button>
         </CardContent>
       </Card>
