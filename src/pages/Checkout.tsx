@@ -28,7 +28,6 @@ export default function Checkout() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [processing, setProcessing] = useState(false);
-  const [stripeKey, setStripeKey] = useState("");
 
   useEffect(() => {
     if (slug) {
@@ -74,31 +73,18 @@ export default function Checkout() {
   };
 
   const handlePayment = async () => {
-    if (!stripeKey) {
-      toast({
-        title: "Stripe API Key Required",
-        description: "Please enter your Stripe publishable key to proceed",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!product) return;
 
     setProcessing(true);
     
     try {
-      // Simulate payment processing for now
-      // In production, this would integrate with Stripe
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Process order in database
-      const { data, error } = await supabase.rpc('process_order', {
-        p_customer_email: email,
-        p_customer_name: name,
-        p_product_id: product.id,
-        p_payment_id: `sim_${Date.now()}`,
-        p_payment_method: 'stripe',
+      // Call edge function for payment processing
+      const { data, error } = await supabase.functions.invoke('process-payment', {
+        body: {
+          productId: product.id,
+          customerEmail: email,
+          customerName: name,
+        }
       });
 
       if (error) throw error;
@@ -260,20 +246,6 @@ export default function Checkout() {
                   <CardTitle className="text-lg">Payment</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="stripeKey">Stripe Publishable Key</Label>
-                    <Input
-                      id="stripeKey"
-                      type="text"
-                      placeholder="pk_test_..."
-                      value={stripeKey}
-                      onChange={(e) => setStripeKey(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Enter your Stripe publishable key to enable payments
-                    </p>
-                  </div>
-
                   <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                     <div className="flex justify-between text-sm">
                       <span>Customer</span>
