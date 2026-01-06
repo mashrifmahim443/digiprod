@@ -56,7 +56,9 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingPopupImage, setUploadingPopupImage] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const popupImageInputRef = useRef<HTMLInputElement>(null);
   
   const [heroContent, setHeroContent] = useState<HeroContent>({
     title: "",
@@ -372,6 +374,39 @@ export default function AdminSettings() {
       });
     } finally {
       setUploadingLogo(false);
+    }
+  };
+
+  const handlePopupImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPopupImage(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `popup-${Date.now()}.${fileExt}`;
+      const filePath = `popups/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("site-assets")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("site-assets")
+        .getPublicUrl(filePath);
+
+      setPopupSettings((prev) => ({ ...prev, image: urlData.publicUrl }));
+      toast({ title: "Popup image uploaded successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingPopupImage(false);
     }
   };
 
@@ -803,20 +838,52 @@ export default function AdminSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label>Image URL (Optional)</Label>
-            <Input
-              value={popupSettings.image}
-              onChange={(e) => setPopupSettings(prev => ({ ...prev, image: e.target.value }))}
-              placeholder="https://example.com/offer-image.jpg"
-            />
+            <Label>Popup Image (Optional)</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Recommended size: 400x300px (PNG or JPG)
+            </p>
+            <div 
+              className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => popupImageInputRef.current?.click()}
+            >
+              <input
+                type="file"
+                ref={popupImageInputRef}
+                onChange={handlePopupImageUpload}
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+              />
+              {popupSettings.image ? (
+                <div className="space-y-3">
+                  <img
+                    src={popupSettings.image}
+                    alt="Popup preview"
+                    className="max-h-32 mx-auto object-contain rounded-lg"
+                  />
+                  <p className="text-sm text-muted-foreground">Click to change image</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {uploadingPopupImage ? (
+                    <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
+                  ) : (
+                    <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    {uploadingPopupImage ? "Uploading..." : "Click to upload image"}
+                  </p>
+                </div>
+              )}
+            </div>
             {popupSettings.image && (
-              <div className="mt-2 rounded-lg overflow-hidden border h-32">
-                <img
-                  src={popupSettings.image}
-                  alt="Popup preview"
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPopupSettings(prev => ({ ...prev, image: "" }))}
+                className="text-destructive hover:text-destructive"
+              >
+                Remove Image
+              </Button>
             )}
           </div>
 
