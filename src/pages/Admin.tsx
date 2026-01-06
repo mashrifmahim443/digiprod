@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, ShoppingCart, Key, DollarSign, Loader2, LogOut, ShieldAlert, Settings, LayoutDashboard, FolderOpen, Ticket } from "lucide-react";
+import { Package, ShoppingCart, Key, DollarSign, Loader2, LogOut, ShieldAlert, Settings, LayoutDashboard, FolderOpen, Ticket, Users, Share2 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import AdminProducts from "@/components/admin/AdminProducts";
 import AdminKeys from "@/components/admin/AdminKeys";
@@ -12,6 +12,8 @@ import AdminOrders from "@/components/admin/AdminOrders";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminCategories from "@/components/admin/AdminCategories";
 import AdminCoupons from "@/components/admin/AdminCoupons";
+import AdminUsers from "@/components/admin/AdminUsers";
+import AdminSocialMedia from "@/components/admin/AdminSocialMedia";
 
 interface DashboardStats {
   total_products: number;
@@ -187,7 +189,7 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
+          <TabsList className="flex flex-wrap gap-1 h-auto p-1 lg:inline-flex">
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4 hidden sm:block" />
               Dashboard
@@ -211,6 +213,14 @@ export default function Admin() {
             <TabsTrigger value="orders" className="gap-2">
               <ShoppingCart className="h-4 w-4 hidden sm:block" />
               Orders
+            </TabsTrigger>
+            <TabsTrigger value="users" className="gap-2">
+              <Users className="h-4 w-4 hidden sm:block" />
+              Users
+            </TabsTrigger>
+            <TabsTrigger value="social" className="gap-2">
+              <Share2 className="h-4 w-4 hidden sm:block" />
+              Social
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="h-4 w-4 hidden sm:block" />
@@ -240,6 +250,14 @@ export default function Admin() {
 
           <TabsContent value="orders">
             <AdminOrders />
+          </TabsContent>
+
+          <TabsContent value="users">
+            <AdminUsers />
+          </TabsContent>
+
+          <TabsContent value="social">
+            <AdminSocialMedia />
           </TabsContent>
 
           <TabsContent value="settings">
