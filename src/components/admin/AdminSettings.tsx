@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Image as ImageIcon, Upload } from "lucide-react";
+import { Loader2, Save, Image as ImageIcon, Upload, CreditCard, Wallet } from "lucide-react";
 import { Json } from "@/integrations/supabase/types";
 
 interface HeroContent {
@@ -21,6 +22,22 @@ interface HeroContent {
 interface SiteInfo {
   siteName: string;
   siteLogo: string;
+}
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: string;
+  enabled: boolean;
+  apiKey?: string;
+  secretKey?: string;
+}
+
+interface PaymentSettings {
+  stripe: PaymentMethod;
+  paypal: PaymentMethod;
+  card: PaymentMethod;
+  bkash: PaymentMethod;
 }
 
 export default function AdminSettings() {
@@ -42,6 +59,13 @@ export default function AdminSettings() {
   const [siteInfo, setSiteInfo] = useState<SiteInfo>({
     siteName: "",
     siteLogo: "",
+  });
+
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
+    stripe: { id: "stripe", name: "Stripe", icon: "💳", enabled: false, apiKey: "", secretKey: "" },
+    paypal: { id: "paypal", name: "PayPal", icon: "🅿️", enabled: false, apiKey: "", secretKey: "" },
+    card: { id: "card", name: "Visa/Mastercard", icon: "💳", enabled: false },
+    bkash: { id: "bkash", name: "bKash", icon: "📱", enabled: false, apiKey: "", secretKey: "" },
   });
 
   useEffect(() => {
@@ -78,6 +102,17 @@ export default function AdminSettings() {
       }
       if (settings.site_logo && typeof settings.site_logo === 'string') {
         setSiteInfo(prev => ({ ...prev, siteLogo: settings.site_logo as string }));
+      }
+      
+      // Load payment settings
+      if (settings.payment_methods && typeof settings.payment_methods === 'object' && !Array.isArray(settings.payment_methods)) {
+        const pm = settings.payment_methods as Record<string, Json>;
+        setPaymentSettings(prev => ({
+          stripe: { ...prev.stripe, enabled: Boolean((pm.stripe as any)?.enabled), apiKey: String((pm.stripe as any)?.apiKey || ""), secretKey: String((pm.stripe as any)?.secretKey || "") },
+          paypal: { ...prev.paypal, enabled: Boolean((pm.paypal as any)?.enabled), apiKey: String((pm.paypal as any)?.apiKey || ""), secretKey: String((pm.paypal as any)?.secretKey || "") },
+          card: { ...prev.card, enabled: Boolean((pm.card as any)?.enabled) },
+          bkash: { ...prev.bkash, enabled: Boolean((pm.bkash as any)?.enabled), apiKey: String((pm.bkash as any)?.apiKey || ""), secretKey: String((pm.bkash as any)?.secretKey || "") },
+        }));
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -159,6 +194,61 @@ export default function AdminSettings() {
       }
 
       toast({ title: "Site info saved successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const savePaymentSettings = async () => {
+    setSaving(true);
+    try {
+      const paymentValue: Json = {
+        stripe: {
+          enabled: paymentSettings.stripe.enabled,
+          apiKey: paymentSettings.stripe.apiKey,
+          secretKey: paymentSettings.stripe.secretKey,
+        },
+        paypal: {
+          enabled: paymentSettings.paypal.enabled,
+          apiKey: paymentSettings.paypal.apiKey,
+          secretKey: paymentSettings.paypal.secretKey,
+        },
+        card: {
+          enabled: paymentSettings.card.enabled,
+        },
+        bkash: {
+          enabled: paymentSettings.bkash.enabled,
+          apiKey: paymentSettings.bkash.apiKey,
+          secretKey: paymentSettings.bkash.secretKey,
+        },
+      };
+
+      const { data: existing } = await supabase
+        .from("site_settings")
+        .select("key")
+        .eq("key", "payment_methods")
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("site_settings")
+          .update({ value: paymentValue })
+          .eq("key", "payment_methods");
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("site_settings")
+          .insert({ key: "payment_methods", value: paymentValue });
+        if (error) throw error;
+      }
+
+      toast({ title: "Payment settings saved successfully" });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -357,6 +447,189 @@ export default function AdminSettings() {
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             <Save className="h-4 w-4 mr-2" />
             Save Hero Content
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Payment Methods */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Wallet className="h-5 w-5" />
+            Payment Methods
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Stripe */}
+          <div className="border rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#635BFF] rounded-lg flex items-center justify-center text-white font-bold">S</div>
+                <div>
+                  <h4 className="font-medium">Stripe</h4>
+                  <p className="text-xs text-muted-foreground">Accept credit cards globally</p>
+                </div>
+              </div>
+              <Switch
+                checked={paymentSettings.stripe.enabled}
+                onCheckedChange={(checked) => setPaymentSettings(prev => ({
+                  ...prev,
+                  stripe: { ...prev.stripe, enabled: checked }
+                }))}
+              />
+            </div>
+            {paymentSettings.stripe.enabled && (
+              <div className="grid md:grid-cols-2 gap-4 pt-2 border-t">
+                <div className="space-y-2">
+                  <Label>Publishable Key</Label>
+                  <Input
+                    type="password"
+                    value={paymentSettings.stripe.apiKey}
+                    onChange={(e) => setPaymentSettings(prev => ({
+                      ...prev,
+                      stripe: { ...prev.stripe, apiKey: e.target.value }
+                    }))}
+                    placeholder="pk_live_..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Secret Key</Label>
+                  <Input
+                    type="password"
+                    value={paymentSettings.stripe.secretKey}
+                    onChange={(e) => setPaymentSettings(prev => ({
+                      ...prev,
+                      stripe: { ...prev.stripe, secretKey: e.target.value }
+                    }))}
+                    placeholder="sk_live_..."
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PayPal */}
+          <div className="border rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#003087] rounded-lg flex items-center justify-center text-white font-bold">P</div>
+                <div>
+                  <h4 className="font-medium">PayPal</h4>
+                  <p className="text-xs text-muted-foreground">Accept PayPal payments</p>
+                </div>
+              </div>
+              <Switch
+                checked={paymentSettings.paypal.enabled}
+                onCheckedChange={(checked) => setPaymentSettings(prev => ({
+                  ...prev,
+                  paypal: { ...prev.paypal, enabled: checked }
+                }))}
+              />
+            </div>
+            {paymentSettings.paypal.enabled && (
+              <div className="grid md:grid-cols-2 gap-4 pt-2 border-t">
+                <div className="space-y-2">
+                  <Label>Client ID</Label>
+                  <Input
+                    type="password"
+                    value={paymentSettings.paypal.apiKey}
+                    onChange={(e) => setPaymentSettings(prev => ({
+                      ...prev,
+                      paypal: { ...prev.paypal, apiKey: e.target.value }
+                    }))}
+                    placeholder="Client ID..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Secret</Label>
+                  <Input
+                    type="password"
+                    value={paymentSettings.paypal.secretKey}
+                    onChange={(e) => setPaymentSettings(prev => ({
+                      ...prev,
+                      paypal: { ...prev.paypal, secretKey: e.target.value }
+                    }))}
+                    placeholder="Secret..."
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Visa/Mastercard */}
+          <div className="border rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-[#1A1F71] to-[#F79E1B] rounded-lg flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-medium">Visa / Mastercard</h4>
+                  <p className="text-xs text-muted-foreground">Direct card payments (via Stripe)</p>
+                </div>
+              </div>
+              <Switch
+                checked={paymentSettings.card.enabled}
+                onCheckedChange={(checked) => setPaymentSettings(prev => ({
+                  ...prev,
+                  card: { ...prev.card, enabled: checked }
+                }))}
+              />
+            </div>
+          </div>
+
+          {/* bKash */}
+          <div className="border rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#E2136E] rounded-lg flex items-center justify-center text-white font-bold text-xs">bKash</div>
+                <div>
+                  <h4 className="font-medium">bKash</h4>
+                  <p className="text-xs text-muted-foreground">Mobile payment for Bangladesh</p>
+                </div>
+              </div>
+              <Switch
+                checked={paymentSettings.bkash.enabled}
+                onCheckedChange={(checked) => setPaymentSettings(prev => ({
+                  ...prev,
+                  bkash: { ...prev.bkash, enabled: checked }
+                }))}
+              />
+            </div>
+            {paymentSettings.bkash.enabled && (
+              <div className="grid md:grid-cols-2 gap-4 pt-2 border-t">
+                <div className="space-y-2">
+                  <Label>App Key</Label>
+                  <Input
+                    type="password"
+                    value={paymentSettings.bkash.apiKey}
+                    onChange={(e) => setPaymentSettings(prev => ({
+                      ...prev,
+                      bkash: { ...prev.bkash, apiKey: e.target.value }
+                    }))}
+                    placeholder="App Key..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>App Secret</Label>
+                  <Input
+                    type="password"
+                    value={paymentSettings.bkash.secretKey}
+                    onChange={(e) => setPaymentSettings(prev => ({
+                      ...prev,
+                      bkash: { ...prev.bkash, secretKey: e.target.value }
+                    }))}
+                    placeholder="App Secret..."
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button onClick={savePaymentSettings} disabled={saving} className="w-full">
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Save className="h-4 w-4 mr-2" />
+            Save Payment Settings
           </Button>
         </CardContent>
       </Card>
