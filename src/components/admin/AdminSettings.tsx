@@ -1005,6 +1005,44 @@ export default function AdminSettings() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Contact Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Contact Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Support Email</Label>
+              <Input
+                type="email"
+                value={contactSettings.email}
+                onChange={(e) => setContactSettings(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="support@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>WhatsApp Number</Label>
+              <Input
+                value={contactSettings.whatsapp}
+                onChange={(e) => setContactSettings(prev => ({ ...prev, whatsapp: e.target.value }))}
+                placeholder="+1234567890"
+              />
+              <p className="text-xs text-muted-foreground">Include country code (e.g., +880...)</p>
+            </div>
+          </div>
+
+          <Button onClick={saveContactSettings} disabled={saving} className="w-full">
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Save className="h-4 w-4 mr-2" />
+            Save Contact Settings
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
